@@ -1,0 +1,160 @@
+{
+  "env": "development",
+  "development": {
+    "frontend_url":"",
+    "allowReferrers": [
+      "http://example1.com",
+      "http://example2.com"
+    ],
+    "db": {
+      "host": "127.0.0.1",
+      "username": "root",
+      "password": "1234",
+      "database": "reserve",
+      "options": {
+        "dialect": "mysql",
+        "host": "127.0.0.1",
+        "logging": false,
+        "define": {
+          "timestamps": false,
+          "freezeTableName": true,
+          "operatorsAliases": false,
+          "underscored": true
+        }
+      },
+      "dialect": "mysql",
+      "pool": {
+        "max": 20000,
+        "min": 0,
+        "idle": 20000,
+        "acquire": 20000
+      },
+      "define": {
+        "timestamps": true,
+        "freezeTableName": true,
+        "operatorsAliases": false,
+        "underscored": true
+      }
+    },
+    "sms": {
+      "account_sid": "",
+      "auth_token": ""
+    },
+    "mailer": {
+      "username": "",
+      "password": "",
+      "service": "",
+      "port": "",
+      "host": "",
+      "robot_email": "",
+      "adminEmail": ""
+    },
+    "cors": {
+      "whiteList": []
+    },
+    "cron": {
+      "minute": "* * * * *",
+      "fiveMinute": "*/5 * * * *",
+      "weekly": "0 10 * * 1",
+      "daily": "0 10 * * *",
+      "active": true
+    },
+    "jwt_secret": "secret"
+  },
+  "test": {
+    "frontend_url":"",
+    "allowReferrers": [
+      "http://example1.com",
+      "http://example2.com"
+    ],
+    "db": {
+      "username": "postgres",
+      "password": "12345",
+      "database": "postgres",
+      "host": "127.0.0.1",
+      "port": "5432",
+      "dialect": "postgres",
+      "schema": "aim",
+      "pool": {
+        "max": 20000,
+        "min": 0,
+        "idle": 20000,
+        "acquire": 20000
+      },
+      "define": {
+        "timestamps": true,
+        "freezeTableName": true,
+        "operatorsAliases": false,
+        "underscored": true
+      }
+    },
+    "mailer": {
+      "username": "",
+      "password": "",
+      "service": "",
+      "port": "",
+      "host": "",
+      "robot_email": "",
+      "adminEmail": ""
+    },
+    "cors": {
+      "whiteList": []
+    },
+    "cron": {
+      "minute": "* * * * *",
+      "fiveMinute": "*/5 * * * *",
+      "weekly": "0 10 * * 1",
+      "daily": "0 10 * * *",
+      "active": true
+    },
+    "jwt_secret": "secret"
+  },
+  "production": {
+    "frontend_url": "",
+    "allowReferrers": [
+      "http://example1.com",
+      "http://example2.com"
+    ],
+    "db": {
+      "username": "postgres",
+      "password": "12345",
+      "database": "postgres",
+      "host": "127.0.0.1",
+      "port": "5432",
+      "dialect": "postgres",
+      "schema": "aim",
+      "pool": {
+        "max": 20000,
+        "min": 0,
+        "idle": 20000,
+        "acquire": 20000
+      },
+      "define": {
+        "timestamps": true,
+        "freezeTableName": true,
+        "operatorsAliases": false,
+        "underscored": true
+      }
+    },
+    "mailer": {
+      "username": "",
+      "password": "",
+      "service": "",
+      "port": "",
+      "host": "",
+      "robot_email": "",
+      "adminEmail": ""
+    },
+    "cors": {
+      "whiteList": []
+    },
+    "cron": {
+      "minute": "* * * * *",
+      "fiveMinute": "*/5 * * * *",
+      "weekly": "0 10 * * 1",
+      "daily": "0 10 * * *",
+      "active": true
+    },
+    "jwt_secret": "secret"
+  }
+}
