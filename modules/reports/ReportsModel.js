@@ -91,38 +91,59 @@ class ReportsModel extends Sequelize.Model {
       FIELD10_NAME: {
         type: DataTypes.STRING
       },
-      FIELD1_DEFAULT: {
+      FIELD1_EXTENSION: {
         type: DataTypes.STRING
       },
-      FIELD2_DEFAULT: {
+      FIELD2_EXTENSION: {
         type: DataTypes.STRING
       },
-      FIELD3_DEFAULT: {
+      FIELD3_EXTENSION: {
         type: DataTypes.STRING
       },
-      FIELD4_DEFAULT: {
+      FIELD4_EXTENSION: {
         type: DataTypes.STRING
       },
-      FIELD5_DEFAULT: {
+      FIELD5_EXTENSION: {
         type: DataTypes.STRING
       },
-      FIELD6_DEFAULT: {
+      FIELD6_EXTENSION: {
         type: DataTypes.STRING
       },
-      FIELD7_DEFAULT: {
+      FIELD7_EXTENSION: {
         type: DataTypes.STRING
       },
-      FIELD8_DEFAULT: {
+      FIELD8_EXTENSION: {
         type: DataTypes.STRING
       },
-      FIELD9_DEFAULT: {
+      FIELD9_EXTENSION: {
         type: DataTypes.STRING
       },
-      FIELD10_DEFAULT: {
+      FIELD10_EXTENSION: {
         type: DataTypes.STRING
       },
       DEL_FLAG: {
         type: DataTypes.INTEGER
+      },
+      CREATE_USER_ID:{
+        type: DataTypes.INTEGER
+      },
+      UPDATE_USER_ID:{
+        type: DataTypes.INTEGER
+      },
+      DELETE_USER_ID:{
+        type: DataTypes.INTEGER
+      },
+      CREATE_DATE:{
+        type: DataTypes.DATE
+      },
+      UPDATE_DATE:{
+        type: DataTypes.DATE
+      },
+      DELETE_DATE:{
+        type: DataTypes.DATE
+      },
+      REPORT_DESCR:{
+        type: DataTypes.STRING
       }
 
     }
@@ -155,17 +176,24 @@ class ReportsModel extends Sequelize.Model {
       field8_name: this.dataValues.FIELD8_NAME,
       field9_name: this.dataValues.FIELD9_NAME,
       field10_name: this.dataValues.FIELD10_NAME,
-      field1_default: this.dataValues.FIELD1_DEFAULT,
-      field2_default: this.dataValues.FIELD2_DEFAULT,
-      field3_default: this.dataValues.FIELD3_DEFAULT,
-      field4_default: this.dataValues.FIELD4_DEFAULT,
-      field5_default: this.dataValues.FIELD5_DEFAULT,
-      field6_default: this.dataValues.FIELD6_DEFAULT,
-      field7_default: this.dataValues.FIELD7_DEFAULT,
-      field8_default: this.dataValues.FIELD8_DEFAULT,
-      field9_default: this.dataValues.FIELD9_DEFAULT,
-      field10_default: this.dataValues.FIELD10_DEFAULT,
-      del_flag: this.dataValues.DEL_FLAG
+      field1_default: this.dataValues.FIELD1_EXTENSION,
+      field2_default: this.dataValues.FIELD2_EXTENSION,
+      field3_default: this.dataValues.FIELD3_EXTENSION,
+      field4_default: this.dataValues.FIELD4_EXTENSION,
+      field5_default: this.dataValues.FIELD5_EXTENSION,
+      field6_default: this.dataValues.FIELD6_EXTENSION,
+      field7_default: this.dataValues.FIELD7_EXTENSION,
+      field8_default: this.dataValues.FIELD8_EXTENSION,
+      field9_default: this.dataValues.FIELD9_EXTENSION,
+      field10_default: this.dataValues.FIELD10_EXTENSION,
+      del_flag: this.dataValues.DEL_FLAG,
+      create_user_id: this.dataValues.CREATE_USER_ID,
+      update_user_id: this.dataValues.UPDATE_USER_ID,
+      delete_user_id: this.dataValues.DELETE_USER_ID,
+      create_date: this.dataValues.CREATE_DATE,
+      update_date: this.dataValues.UPDATE_DATE,
+      delete_date: this.dataValues.DELETE_DATE,
+      report_descr: this.dataValues.REPORT_DESCR
     }
   }
 

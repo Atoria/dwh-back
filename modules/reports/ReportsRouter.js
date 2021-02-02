@@ -19,15 +19,20 @@ router.delete('/:id', async (req, res, next) => {
     return res.send({success: false, error: 'You dont have permission'})
   }
 
-  let destroyed = await Reports.destroy({
-    where: {ID: req.params.id}
+  let report = await Reports.findOne({
+    where: {
+      ID: req.params.id
+    }
   });
 
-  if (destroyed) {
-    return res.send({success: true})
-  }
+  report.DELETE_DATE = Date.now()
+  report.DELETE_USER_ID = user.dataValues.id
 
-  return res.send({success: false})
+
+  await report.save()
+
+
+  return res.send({success: true})
 
 
 })
@@ -42,22 +47,24 @@ router.post('/', async (req, res, next) => {
 
   const t = await sequelize.transaction();
   try {
-
     let reportData = {
       REPORT_NAME: req.body.report_name,
       REPORT_COLOR: req.body.report_color,
       REPORT_SELECT: req.body.report_select,
-      FIELD_CNT: req.body.column_number
+      FIELD_CNT: req.body.column_number,
+      REPORT_DESCR: req.body.report_descr
     };
     let index = 1;
     for (let field of req.body.fields) {
       reportData[`FIELD${index}_NAME`] = field.field_name;
       reportData[`FIELD${index}_TYPE`] = field.field_type;
-      reportData[`FIELD${index}_DEFAULT`] = field.field_default;
+      reportData[`FIELD${index}_EXTENSION`] = field.field_default;
       index++;
     }
 
     let report;
+    reportData['UPDATE_DATE'] = Date.now()
+    reportData['UPDATE_USER_ID'] = user.dataValues.id
 
     if (req.body.id) {
       await Reports.update(reportData, {
@@ -65,10 +72,10 @@ router.post('/', async (req, res, next) => {
           ID: req.body.id
         }
       }, {transaction: t});
-
-
       report = await Reports.findOne({where: {ID: req.body.id}})
     } else {
+      reportData['CREATE_DATE'] = Date.now()
+      reportData['CREATE_USER_ID'] = user.dataValues.id
       report = await Reports.create(reportData, {transaction: t});
     }
 
@@ -91,14 +98,14 @@ router.post('/import', async (req, res, next) => {
     if (req.files.file.mimetype !== 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
       return res.send({success: false, error: 'Incorrect file type'});
     }
-    let result = await excelHelper.parseExcel(req.files.file.data, user);
+    let result = await excelHelper.parseExcel(req.files.file.data, user, req.body.report_id);
 
-    if (!result) {
+    if (!result.success) {
       return res.send({success: false, error: 'Could not parse file'})
     }
 
 
-    return res.send({success: true})
+    return res.send(result)
 
   } catch (e) {
     console.log(e);
@@ -141,7 +148,11 @@ router.get('/', async (req, res, next) => {
 
     let reports = [];
     if (user.dataValues.role !== User.getUserRole()) {
-      reports = await Reports.findAll();
+      reports = await Reports.findAll({
+        where: {
+          DELETE_DATE: null
+        }
+      });
 
     } else {
       reports = await Reports.findAll({
@@ -154,7 +165,8 @@ router.get('/', async (req, res, next) => {
           }
         },
         where: {
-          DEL_FLAG: 0
+          DEL_FLAG: 0,
+          DELETE_DATE: null
         }
       });
     }
@@ -168,16 +180,15 @@ router.get('/', async (req, res, next) => {
   }
 })
 
-router.get('/download-excel/:id', async (req, res, next) => {
+router.get('/download-excel/:id/:session_id', async (req, res, next) => {
   try {
     let user = req.user;
-    let buffer = await excelHelper.downloadExcel(user.dataValues.id, req.params.id);
+    let buffer = await excelHelper.downloadExcel(user.dataValues.id, req.params.id, req.params.session_id);
     return res.send({success: true, buffer})
   } catch (e) {
     console.log(e);
     res.send({success: false})
   }
-
 })
 
 router.get('/:id', async (req, res, next) => {
@@ -190,14 +201,16 @@ router.get('/:id', async (req, res, next) => {
       report = await Reports.findOne({
         where:
           {
-            id: req.params.id
+            id: req.params.id,
+            DELETE_DATE: null
           }
       });
     } else {
       report = await Reports.findOne({
         where:
           {
-            id: req.params.id
+            id: req.params.id,
+            DELETE_DATE: null
           },
         include: {
           model: ReportAccess,

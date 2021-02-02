@@ -7,17 +7,14 @@ const xlsx = require('xlsx');
 const sequelize = require('./../modules/model').sequelize;
 const excel = require('exceljs');
 const {QueryTypes} = require('sequelize');
-require('sequelize-batches');
+const {uuid} = require('uuidv4');
 
 
-parseExcel = async function (buffer, user) {
+parseExcel = async function (buffer, user, report_id) {
   const t = await sequelize.transaction();
   try {
     ExcelData.removeAttribute('id');
-
-    await ExcelData.destroy({
-      where: {USER_ID: user.id}
-    })
+    let sessionID = uuid();
 
     console.log('Came');
     let wb = xlsx.read(buffer, {type: 'buffer'});
@@ -27,6 +24,13 @@ parseExcel = async function (buffer, user) {
     let savedHeader = false;
     let insertData = [];
     let headers = [];
+
+    let commonFieldValues = {
+      USER_ID: user.id,
+      REPORT_ID: report_id,
+      SESSION_ID: sessionID,
+      IMPORT_DATE: Date.now()
+    }
 
     for (let sheetName of wb.SheetNames) {
       console.log('READING SHEET', sheetName);
@@ -43,8 +47,8 @@ parseExcel = async function (buffer, user) {
           }
 
           let insertObj = {
-            USER_ID: user.id,
-            ROW_TYPE: 1
+            ...commonFieldValues,
+            ROW_TYPE: 1,
           };
           headers.forEach((header, index) => {
             insertObj[`FIELD${index + 1}_VALUE`] = header;
@@ -54,8 +58,9 @@ parseExcel = async function (buffer, user) {
         }
 
         let dataObj = {
-          USER_ID: user.id,
-          ROW_TYPE: 2
+          ...commonFieldValues,
+          ROW_TYPE: 2,
+
         }
 
         headers.forEach((header, index) => {
@@ -82,25 +87,26 @@ parseExcel = async function (buffer, user) {
     console.log('FINISHED');
 
     await t.commit();
-    return true;
+    return {success: true, session_id: sessionID};
   } catch (e) {
     console.log(e);
     await t.rollback();
-    return false;
+    return {success: false};
   }
 
 }
 
 
-downloadExcel = async function (user_id, report_id) {
+downloadExcel = async function (user_id, report_id, session_id) {
+  let tempFile = 'tmp/' + session_id + '.xlsx'
   let sheetIndex = 1;
   let workbook = new excel.Workbook();
   let worksheet = workbook.addWorksheet(`Sheet${sheetIndex}`);
-  await workbook.xlsx.writeFile('test.xlsx');
+  await workbook.xlsx.writeFile(tempFile);
 
   let report = await Reports.findOne({where: {ID: report_id}});
 
-  let rawSelect = report.dataValues.REPORT_SELECT.replace("?", user_id);
+  let rawSelect = report.dataValues.REPORT_SELECT.replace(":SESSION_ID", `'${session_id}'`);
 
   let countSelect = `SELECT count(*) as total from (${rawSelect}) as total`
 
@@ -114,11 +120,10 @@ downloadExcel = async function (user_id, report_id) {
   let sheetRowCount = 0;
   let isKeyMapped = false;
 
-
   while (curr < total) {
     console.log('--------------');
     workbook = new excel.Workbook();
-    await workbook.xlsx.readFile('test.xlsx');
+    await workbook.xlsx.readFile(tempFile);
     worksheet = workbook.getWorksheet(`Sheet${sheetIndex}`);
     let beforeSelect = Date.now();
 
@@ -164,15 +169,16 @@ downloadExcel = async function (user_id, report_id) {
       sheetRowCount = 0;
     }
 
-    await workbook.xlsx.writeFile('test.xlsx');
+    await workbook.xlsx.writeFile(tempFile);
 
 
     console.log('CURRENTLY ON', curr);
 
   }
 
-  return await workbook.xlsx.writeBuffer()
+  return await workbook.xlsx.writeBuffer();
 }
+
 
 module.exports = {
   parseExcel,
