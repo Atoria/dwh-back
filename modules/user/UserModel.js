@@ -54,7 +54,8 @@ class UserModel extends Sequelize.Model {
       last_name: this.dataValues.last_name,
       email: this.dataValues.email,
       role: this.dataValues.role,
-      id: this.dataValues.id
+      id: this.dataValues.id,
+      del_flag: this.dataValues.DEL_FLAG
     }
   }
 
