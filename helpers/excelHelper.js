@@ -3,19 +3,18 @@ const Op = Sequelize.Op;
 const User = require('./../modules/model').User;
 const ExcelData = require('./../modules/model').ExcelData;
 const Reports = require('./../modules/model').Reports;
+const SessionLog = require('./../modules/model').SessionLog;
 const xlsx = require('xlsx');
 const sequelize = require('./../modules/model').sequelize;
 const excel = require('exceljs');
 const {QueryTypes} = require('sequelize');
 const {uuid} = require('uuidv4');
+const sessionLogHelper = require('./sessionLogHelper')
 
-
-parseExcel = async function (buffer, user, report_id) {
+parseExcel = async function (buffer, user, report_id, sessionID) {
   const t = await sequelize.transaction();
   try {
     ExcelData.removeAttribute('id');
-    let sessionID = uuid();
-
     console.log('Came');
     let wb = xlsx.read(buffer, {type: 'buffer'});
     console.log('Finished Reading');
@@ -69,12 +68,24 @@ parseExcel = async function (buffer, user, report_id) {
         insertData.push(dataObj);
 
         if (insertData.length > 1000) {
+          let isAborted = await SessionLog.findOne({
+            where: {
+              SESSION_ID: sessionID,
+              STATUS: SessionLog.getStatusAbort()
+            }
+          })
+
+          if (isAborted) {
+            await t.rollback()
+            return {success: false, error: 'Process aborted'};
+          }
+
           console.log('EXEED INSERT');
           await ExcelData.bulkCreate(insertData, {transaction: t});
           insertData = [];
         }
-
       }
+
     }
 
     if (insertData.length > 0) {
@@ -89,9 +100,14 @@ parseExcel = async function (buffer, user, report_id) {
     await t.commit();
     return {success: true, session_id: sessionID};
   } catch (e) {
+
+    await sessionLogHelper.updateEntryStatus({
+      STATUS: SessionLog.getStatusFailed()
+    }, sessionID);
+
     console.log(e);
     await t.rollback();
-    return {success: false};
+    return {success: false, error: 'Error Occurred During Import'};
   }
 
 }
@@ -121,6 +137,19 @@ downloadExcel = async function (user_id, report_id, session_id) {
   let isKeyMapped = false;
 
   while (curr < total) {
+
+    let isAborted = await SessionLog.findOne({
+      where: {
+        SESSION_ID: session_id,
+        STATUS: SessionLog.getStatusAbort()
+      }
+    })
+
+    if (isAborted) {
+      return {success: false, error: 'Process aborted'};
+    }
+
+
     console.log('--------------');
     workbook = new excel.Workbook();
     await workbook.xlsx.readFile(tempFile);
@@ -176,7 +205,7 @@ downloadExcel = async function (user_id, report_id, session_id) {
 
   }
 
-  return await workbook.xlsx.writeBuffer();
+  return {success: true, data: await workbook.xlsx.writeBuffer()}
 }
 
 
