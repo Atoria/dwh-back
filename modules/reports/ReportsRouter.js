@@ -242,7 +242,7 @@ router.get('/download-excel/:id/:session_id', async (req, res, next) => {
     }
 
 
-    return res.send({success: true, buffer})
+    return res.send({success: true, buffer: result.data})
   } catch (e) {
     await sessionLogHelper.updateEntryStatus({
       STATUS: SessionLog.getStatusFailed()
