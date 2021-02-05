@@ -5,6 +5,7 @@
  */
 
 const cluster = require('cluster');
+const {getCurrentUser} = require("../helpers/userIdentity");
 
 
 if (cluster.isMaster) {
@@ -32,6 +33,33 @@ if (cluster.isWorker) {
    */
 
   const server = http.createServer(app);
+
+  /**
+   * Initialize Socket
+   */
+
+  const io = require('socket.io')(server);
+
+  io.use(async function (socket, next) {
+    if (socket.handshake.query && socket.handshake.query.token) {
+      let user = await getCurrentUser(socket.handshake.query.token)
+      if (!user) {
+        return next(new Error('Authentication error'));
+      }
+      socket.user = user.dataValues;
+      return next();
+    } else {
+      next(new Error('Authentication error'));
+    }
+  })
+    .on('connection', socket => {
+      SOCKET_LIST[socket.user.id] = socket;
+      socket.on('disconnect', function (error) {
+        console.log('DISCONNECTED: ' , socket.user.id + ' - ' + error);
+        delete SOCKET_LIST[socket.user.id]
+      });
+    })
+
 
   /**
    * Listen on provided port, on all network interfaces.

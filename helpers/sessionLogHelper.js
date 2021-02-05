@@ -6,37 +6,42 @@ const Reports = require('./../modules/model').Reports;
 const SessionLog = require('./../modules/model').SessionLog;
 
 
-createEntry = async function (sessionId, reportId, userId,type) {
-  try {
+createEntry = async function (sessionId, reportId, userId, type) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      await SessionLog.create({
+        TYPE: type,
+        SESSION_ID: sessionId,
+        REPORT_ID: reportId,
+        USER_ID: userId,
+        STATUS: SessionLog.getStatusPending(),
+        CREATE_DATE: Date.now()
+      })
+      return resolve()
+    } catch (e) {
+      return reject()
+    }
+  })
 
-    await SessionLog.create({
-      TYPE: type,
-      SESSION_ID: sessionId,
-      REPORT_ID: reportId,
-      USER_ID: userId,
-      STATUS: SessionLog.getStatusPending(),
-      CREATE_DATE: Date.now()
-    })
-    return true
-  } catch (e) {
-    return false
-  }
 }
 
 updateEntryStatus = async function (data, sessionId) {
-  try {
-    await SessionLog.update({
-      ...data
-    }, {
-      where: {
-        SESSION_ID: sessionId
-      }
-    })
+  return new Promise(async (resolve, reject) => {
+    try {
+      await SessionLog.update({
+        ...data
+      }, {
+        where: {
+          SESSION_ID: sessionId
+        }
+      })
 
-    return true
-  } catch (e) {
-    return false
-  }
+      return resolve();
+    } catch (e) {
+      return reject();
+    }
+  })
+
 }
 
 module.exports = {

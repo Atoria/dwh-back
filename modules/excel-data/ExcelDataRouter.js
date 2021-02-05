@@ -4,12 +4,20 @@ const User = require('./../model').User;
 const ExcelData = require('./../model').ExcelData;
 const Sequelize = require('sequelize');
 const moment = require('moment')
+const auth = require('../../helpers/auth');
+
+router.all('/*', auth.isAuthorized, (req, res, next) => {
+  next();
+})
+
+
 
 router.get('/', async (req, res, next) => {
   let user = req.user;
 
   try {
 
+    console.log(req.query);
     let header = await ExcelData.findOne({
       where: {
         SESSION_ID: req.query.session_id,

@@ -10,6 +10,7 @@ const passport = require('passport');
 const fileUpload = require('express-fileupload');
 const cors = require('cors');
 const config = require('./config');
+global.SOCKET_LIST = {}
 
 var corsOptions = {
   origin: function (origin, callback) {
