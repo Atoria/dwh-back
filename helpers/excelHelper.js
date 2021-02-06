@@ -10,6 +10,7 @@ const excel = require('exceljs');
 const {QueryTypes} = require('sequelize');
 const {uuid} = require('uuidv4');
 const sessionLogHelper = require('./sessionLogHelper')
+const fs = require('fs');
 
 parseExcel = async function (buffer, user, report_id, sessionID) {
     return new Promise(async (resolve, reject) => {
@@ -25,7 +26,7 @@ parseExcel = async function (buffer, user, report_id, sessionID) {
             }
             ExcelData.removeAttribute('id');
             console.log('Came');
-            let wb = xlsx.read(buffer, {type: 'buffer'});
+            let wb = xlsx.read(buffer, {type: 'buffer', raw: true});
             console.log('Finished Reading');
             let savedHeader = false;
             let insertData = [];
@@ -142,112 +143,124 @@ parseExcel = async function (buffer, user, report_id, sessionID) {
 
 
 downloadExcel = async function (user_id, report_id, session_id) {
-    console.log('START DOWNLOAD');
-    let tempFile = 'tmp/' + session_id + '.xlsx'
-    let sheetIndex = 1;
+    return new Promise(async (resolve, reject) => {
+        try {
 
-    let workbook = new excel.Workbook();
-    let worksheet = workbook.addWorksheet(`Sheet${sheetIndex}`);
-    await workbook.xlsx.writeFile(tempFile);
-    console.log('CRETED WORKBOOK');
-    let report = await Reports.findOne({where: {ID: report_id}});
+            console.log('START DOWNLOAD');
+            let tempFile = 'tmp/' + session_id + '.xlsx'
+            let sheetIndex = 1;
 
-    let rawSelect = report.dataValues.REPORT_SELECT.replace(":SESSION_ID", `'${session_id}'`);
+            let workbook = new excel.Workbook();
+            let worksheet = workbook.addWorksheet(`Sheet${sheetIndex}`);
+            await workbook.xlsx.writeFile(tempFile);
+            console.log('CRETED WORKBOOK');
+            let report = await Reports.findOne({where: {ID: report_id}});
 
-    let countSelect = `SELECT count(*) as total from (${rawSelect}) as total`
+            let rawSelect = report.dataValues.REPORT_SELECT.replace(":SESSION_ID", `'${session_id}'`);
+
+            let countSelect = `SELECT count(*) as total from (${rawSelect}) as total`
 
 
-    let total = await sequelize.query(countSelect, {
-        type: QueryTypes.SELECT
-    });
-    console.log('TOTAL ROW: ', total);
+            let total = await sequelize.query(countSelect, {
+                type: QueryTypes.SELECT
+            });
+            console.log('TOTAL ROW: ', total);
 
-    total = total[0]['total'];
-    let curr = 0;
-    let limit = 1000;
-    let sheetRowCount = 0;
-    let isKeyMapped = false;
+            total = total[0]['total'];
+            let curr = 0;
+            let limit = 1000;
+            let sheetRowCount = 0;
+            let isKeyMapped = false;
 
-    while (curr < total) {
-        console.log('START WHILE CURR: ', curr);
-        let isAborted = await SessionLog.findOne({
-            where: {
-                SESSION_ID: session_id,
-                STATUS: SessionLog.getStatusAbort()
+            while (curr < total) {
+                console.log('START WHILE CURR: ', curr);
+                let isAborted = await SessionLog.findOne({
+                    where: {
+                        SESSION_ID: session_id,
+                        STATUS: SessionLog.getStatusAbort()
+                    }
+                })
+
+                if (isAborted) {
+                    return {success: false, error: 'Process aborted'};
+                }
+
+
+                console.log('--------------');
+                workbook = new excel.Workbook();
+                await workbook.xlsx.readFile(tempFile);
+                worksheet = workbook.getWorksheet(`Sheet${sheetIndex}`);
+                let beforeSelect = Date.now();
+
+                console.log('BEFORE SELECT', beforeSelect);
+                let currSelect = `${rawSelect} limit ${limit} offset ${curr}`
+                let records = await sequelize.query(currSelect, {
+                    type: QueryTypes.SELECT
+                });
+
+                let afterSelect = Date.now();
+                console.log('AFTER SELECT', afterSelect);
+                console.log('SELECT DIFF=' + (afterSelect - beforeSelect))
+
+
+                if (!isKeyMapped) {
+                    let header = records.length ? records[0] : {}
+                    let excelColumns = [];
+                    Object.keys(header).forEach((head) => {
+                        excelColumns.push({header: head, key: head, width: 30})
+                    })
+                    worksheet.columns = excelColumns;
+                }
+
+                console.log('BEFORE INSERT EXCEL', Date.now());
+                let beforeInsert = Date.now();
+
+                worksheet.addRows(records);
+
+                console.log('AFTER INSERT EXCEL', Date.now());
+                let afterInsert = Date.now();
+
+                console.log('INSERT EXCEL DIFF=' + (afterInsert - beforeInsert))
+
+
+                sheetRowCount += limit;
+                curr += limit;
+
+                if (sheetRowCount > 800000) {
+                    sheetIndex++;
+                    worksheet = workbook.addWorksheet(`Sheet${sheetIndex}`);
+                    sheetRowCount = 0;
+                }
+
+                await workbook.xlsx.writeFile(tempFile);
+
+                if (SOCKET_LIST.hasOwnProperty(user_id)) {
+                    if (curr > total) {
+                        curr = total;
+                    }
+
+                    SOCKET_LIST[user_id].emit('importStatus', {
+                        session: session_id,
+                        progress: (curr / total) * 100,
+                        type: 'Generating'
+                    })
+                }
+
             }
-        })
 
-        if (isAborted) {
-            return {success: false, error: 'Process aborted'};
-        }
-
-
-        console.log('--------------');
-        workbook = new excel.Workbook();
-        await workbook.xlsx.readFile(tempFile);
-        worksheet = workbook.getWorksheet(`Sheet${sheetIndex}`);
-        let beforeSelect = Date.now();
-
-        console.log('BEFORE SELECT', beforeSelect);
-        let currSelect = `${rawSelect} limit ${limit} offset ${curr}`
-        let records = await sequelize.query(currSelect, {
-            type: QueryTypes.SELECT
-        });
-
-        let afterSelect = Date.now();
-        console.log('AFTER SELECT', afterSelect);
-        console.log('SELECT DIFF=' + (afterSelect - beforeSelect))
-
-
-        if (!isKeyMapped) {
-            let header = records.length ? records[0] : {}
-            let excelColumns = [];
-            Object.keys(header).forEach((head) => {
-                excelColumns.push({header: head, key: head, width: 30})
-            })
-            worksheet.columns = excelColumns;
-        }
-
-        console.log('BEFORE INSERT EXCEL', Date.now());
-        let beforeInsert = Date.now();
-
-        worksheet.addRows(records);
-
-        console.log('AFTER INSERT EXCEL', Date.now());
-        let afterInsert = Date.now();
-
-        console.log('INSERT EXCEL DIFF=' + (afterInsert - beforeInsert))
-
-
-        sheetRowCount += limit;
-        curr += limit;
-
-        if (sheetRowCount > 800000) {
-            sheetIndex++;
-            worksheet = workbook.addWorksheet(`Sheet${sheetIndex}`);
-            sheetRowCount = 0;
-        }
-
-        await workbook.xlsx.writeFile(tempFile);
-
-        if (SOCKET_LIST.hasOwnProperty(user_id)) {
-            if (curr > total) {
-                curr = total;
+            console.log('ALMOST DONE');
+            await fs.unlinkSync(`tmp/${session_id}.xlsx`);
+            if (SOCKET_LIST.hasOwnProperty(user_id)) {
+                SOCKET_LIST[user_id].emit('generatedSuccess', {
+                    buffer: await workbook.xlsx.writeBuffer(),
+                    report_name: report.dataValues.REPORT_NAME
+                })
             }
-
-            SOCKET_LIST[user_id].emit('importStatus', {
-                session: session_id,
-                progress: (curr / total) * 100,
-                type: 'Generating'
-            })
+            resolve()
+        } catch (e) {
+            reject(e)
         }
-
-    }
-
-    await fs.unlinkSync(`tmp/${req.params.session_id}.xlsx`);
-    if (SOCKET_LIST.hasOwnProperty(user_id)) {
-        SOCKET_LIST[user_id].emit('generatedSuccess', {buffer: await workbook.xlsx.writeBuffer()})
-    }
+    })
 }
 
 

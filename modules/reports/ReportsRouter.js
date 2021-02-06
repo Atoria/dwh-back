@@ -9,7 +9,6 @@ const sessionLogHelper = require('./../../helpers/sessionLogHelper')
 const excel = require("exceljs");
 const ReportAccess = require('./../model').ReportAccess;
 const SessionLog = require('./../model').SessionLog;
-const fs = require('fs');
 
 router.all('/*', auth.isAuthorized, (req, res, next) => {
     next();
@@ -268,6 +267,30 @@ router.get('/import-pending', async (req, res, next) => {
         return res.send({success: false, error: e});
     }
 })
+
+router.get('/latest-complete-import', async (req, res, next) => {
+    let user = req.user;
+
+    try {
+
+        let activeSession = await SessionLog.findOne({
+            where: {
+                REPORT_ID: req.query.report_id,
+                USER_ID: user.dataValues.id,
+                STATUS: SessionLog.getStatusComplete()
+            },
+            order: [
+                ['ID', 'desc']
+            ]
+        })
+
+        res.send({success: true, complete: activeSession ? activeSession.dataValues : null})
+    } catch (e) {
+        console.log(e);
+        return res.send({success: false, error: e});
+    }
+})
+
 
 router.get('/download-excel/:id/:session_id', async (req, res, next) => {
     try {
